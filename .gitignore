@@ -1,0 +1,4 @@
+out
+*.o
+boost_1_67_0/
+*.tar.bz2
