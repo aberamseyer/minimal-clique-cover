@@ -2,3 +2,8 @@ out
 *.o
 boost_1_67_0/
 *.tar.bz2
+
+# CLion stuff
+CMakeLists.txt
+cmake-build-debug/
+.idea/
