@@ -1,7 +1,9 @@
 out
 *.o
+*.out
 boost_1_67_0/
-*.tar.bz2
+*.tar.*
+*.txt
 
 # CLion stuff
 CMakeLists.txt

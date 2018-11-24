@@ -9,12 +9,15 @@ main: main.o
 main.o:
 	${CC} ${FLAGS} -c main.cpp
 
+run: clean main
+	./out 30.txt
+
+mpi:
+	mpicc -g -Wall ${FLAGS} -o out main.cpp
+
+runmpi:
+	mpiexec -n 4 ./out
+
 clean:
 	rm *.o
 	rm out
-
-run: clean main
-	./out facebook_combined.txt
-
-min: clean main
-	./out min.txt
