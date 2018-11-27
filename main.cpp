@@ -1,7 +1,7 @@
 #include <fstream>
 #include "Graph.h"
 #include <iostream>
-#include <math.h>
+//#include <math.h>
 #include <omp.h>
 #include <set>
 #include <stdlib.h>
@@ -39,27 +39,6 @@ void bron_kerbosch (const std::vector<int> &r, std::vector<int> p, std::vector<i
 		p.erase(p.begin());
 		x.push_back(v);
 	}
-}
-
-std::vector<bool> nth_permutation (unsigned long size, unsigned num_trues, int index) {
-
-	std::vector<bool> mask;
-	mask.reserve(size);
-	for (unsigned i = 0; i < size; i++) {
-		bool val = i < num_trues;
-		mask.push_back(val);
-	}
-
-	std::vector<bool> result;
-	result.reserve(size);
-    for (unsigned i = 0; i < size; i++) {
-        unsigned long item = index % size;
-        index /= size;
-        result.push_back(mask[item]);
-        mask.erase(mask.begin() + item);
-    }
-
-    return result;
 }
 
 unsigned n_choose_k (unsigned n, unsigned k) {
@@ -129,17 +108,25 @@ int main(int argc, char* argv[]) {
 		}
 
 		// Loop through all clique covers for a given size
-		int nCk = n_choose_k(static_cast<unsigned int>(size), num_included);
-#pragma omp parallel for
-		for (int j = 0; j < nCk; j++) {
+		unsigned nCk = n_choose_k(static_cast<unsigned int>(size), num_included);
+
+		auto orig_mask = std::vector<bool>(size);
+		std::fill_n(orig_mask.begin(), num_included, true);
+
+        #pragma omp parallel for
+		for (unsigned j = 0; j < nCk; j++) {
+		    std::vector<bool> *mask;
+            #pragma omp critical
+		    {
+				std::prev_permutation(orig_mask.begin(), orig_mask.end());
+                mask = new std::vector<bool>(orig_mask);
+		    }
 			// the set of cliques that is possibly a (minimal) clique cover
 			std::set<int> ints_in_clique_set;
 			// what might be our minimal clique cover
 			std::vector<std::vector<int>*> candidate;
-			std::vector<bool> mask = nth_permutation(size, num_included, j);
-#pragma omp parallel for
 			for (unsigned k = 0; k < size; ++k) {
-				if (mask[k]) {
+				if ((*mask)[k]) {
 					// all the vertices that the candidate has within it
 					for(const int a : maximal_cliques[k]) {
 						ints_in_clique_set.insert(a);
@@ -147,6 +134,7 @@ int main(int argc, char* argv[]) {
 					candidate.push_back(&maximal_cliques[k]);
 				}
 			}
+			delete mask;
 	        // determine if this is a clique cover
 	        if (ints_in_clique_set.size() != all_vertices.size()) {
 	            continue;
@@ -155,8 +143,6 @@ int main(int argc, char* argv[]) {
 	        if (result.empty() || candidate.size() < result.size()) {
 	            result = candidate;
 	            done = true;
-//#pragma omp single
-//	        	break;
 	        }
 		}
 	}

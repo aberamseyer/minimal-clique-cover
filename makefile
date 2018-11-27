@@ -1,5 +1,5 @@
 CC = g++
-FLAGS = -std=c++11 -g -Wall
+FLAGS = -std=c++11 -g -Wall -O3
 
 all: main
 
@@ -17,7 +17,7 @@ run: clean main
 	./out test_data/13.txt
 
 openmp:
-	${CC} ${FLAGS} -fopenmp Graph.cpp main.cpp -o out
+	${CC} ${FLAGS} -fopenmp -pg Graph.cpp main.cpp -o out
 
 mpi:
 	mpicc ${FLAGS} Graph.cpp main.cpp -o out

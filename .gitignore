@@ -1,4 +1,7 @@
 out
+*.out
+profile
+*.txt
 *.o
 boost_1_67_0/
 *.tar.bz2
