@@ -1,32 +1,24 @@
-#include <boost/graph/adjacency_iterator.hpp>
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/range/algorithm_ext/push_back.hpp>
-#include <boost/range/irange.hpp>
 #include <fstream>
+#include "Graph.h"
 #include <iostream>
 #include <math.h>
-#include <mpi.h>
+//#include <mpi.h>
 #include <set>
 #include <stdlib.h>
 #include <string>
 #include <vector>
 
-using namespace boost;
-
-typedef adjacency_list<setS, vecS, undirectedS> Graph;
-
 std::vector<std::vector<int>> maximal_cliques;
 Graph g;
 
-std::vector<int> intersection (std::vector<int> v1, std::vector<int> v2) {
-	std::vector<int> intersection;
-	set_intersection(v1.begin(), v1.end(), v2.begin(), v2.end(), back_inserter(intersection));
-	return intersection;
+std::vector<int> intersection(std::vector<int> &s1, std::vector<int> &s2) {
+    std::vector<int> to_return;
+    std::set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(), std::back_inserter(to_return));
+    return to_return;
 }
-
 void bron_kerbosch (std::vector<int> r, std::vector<int> p, std::vector<int> x, int depth) {
-	if (p.size() == 0) {
-		if (x.size() == 0) maximal_cliques.push_back(r);
+	if (p.empty()) {
+		if (x.empty()) maximal_cliques.push_back(r);
 		return;
 	}
 	while (p.size() > 0) {
@@ -35,8 +27,10 @@ void bron_kerbosch (std::vector<int> r, std::vector<int> p, std::vector<int> x, 
 		std::vector<int> this_p = p;
 		std::vector<int> this_x = x;
 		std::vector<int> neighborhood;
-		auto neighbors = adjacent_vertices(v, g);
-		for (auto vd : make_iterator_range(neighbors)) neighborhood.push_back(vd);
+		auto neighbors = g.get_adjacent_vertices(v);
+        neighborhood.reserve(neighborhood.size());
+        for (auto vd : neighbors)
+		    neighborhood.push_back(vd);
 
 		this_r.push_back(v);
 		// bron_kerbosch(R ⋃ {v}, P ⋂ N(v), X ⋂ N(v))
@@ -45,6 +39,38 @@ void bron_kerbosch (std::vector<int> r, std::vector<int> p, std::vector<int> x, 
 		p.erase(p.begin());
 		x.push_back(v);
 	}
+}
+
+std::vector<bool> nth_permutation (int size, int num_trues, int index) {
+
+	std::vector<bool> mask;
+	mask.reserve(static_cast<unsigned long>(size));
+	for (int i = 0; i < size; i++) {
+		bool val = i < num_trues;
+		mask.push_back(val);
+	}
+
+	std::vector<bool> result;
+	result.reserve(static_cast<unsigned long>(size));
+    for (int i = 0; i < size; i++) {
+        int item = index % size;
+        index /= size;
+        result.push_back(mask[item]);
+        mask.erase(mask.begin() + item);
+    }
+
+    return result;
+}
+
+unsigned n_choose_k (unsigned n, unsigned k) {
+	if (k > n) return 0;
+	if (k * 2 > n) k = n-k;
+	if (k == 0) return 1;
+
+	unsigned result = n;
+	for (unsigned i = 2; i <= k; ++i )
+		result *= (n-i+1) / i;
+	return result;
 }
 
 int main(int argc, char* argv[]) {
@@ -63,10 +89,29 @@ int main(int argc, char* argv[]) {
 	}
 	int name1, name2;
 	// format of file always has 2 nodes on every line
-	while(input_file >> name1 >> name2)
-		add_edge(name1, name2, g);
+	std::vector<std::pair<int, int>> data;
+	while(input_file >> name1 >> name2) {
+	    std::pair<int, int> to_add (name1, name2);
+	    data.push_back(to_add);
+    }
+    g.set_size(static_cast<unsigned long>(name1));
+	for(auto i : data) {
+		g.add_edge(i.first, i.second);
+	}
+    std::cout << "built graph" << std::endl;
 
-	unsigned int num_maximal_cliques;
+	std::vector<int> all_vertices;
+    all_vertices.reserve(g.get_num_vertices());
+    for(unsigned i = 0; i < g.get_num_vertices(); ++i)
+	    all_vertices.push_back(i);
+	std::cout << "vertex count: " << g.get_num_vertices() << ", finding maximal cliques.." << std::endl;
+	bron_kerbosch(std::vector<int>(), all_vertices, std::vector<int>(), 0);
+	std::cout << "We found " << maximal_cliques.size() << " maximal cliques." << std::endl;
+//	for (const std::vector<int> c: maximal_cliques) {
+//		std::cout << "Clique: ";
+//		for (const int v: c) std::cout << v << " ";
+//		std::cout << std::endl;
+//	}
 
 	MPI_Init(&argc, &argv);
 	int my_rank, num_processes;
@@ -92,41 +137,46 @@ int main(int argc, char* argv[]) {
 	std::vector<std::vector<int>*> result;
 
 	bool done = false;
-	// We need to go from 0...maximal_cliques - 1
-	// That's num_maximal_cliques iterations
-	for(unsigned int i = 1; i <= num_maximal_cliques && !done; ++i) {
-		if (i == 1) {
-			std::cout << "checking for a complete graph.." << std::endl;
+
+	// Loop through each size of clique cover, beginning at 1. i is the number of cliques that are to be in the cover
+	for(unsigned num_included = 1; num_included <= size && !done; ++num_included) {
+		if (num_included == 1) {
+			std::cout << "checking for a complete Graph.." << std::endl;
 		} else {
-			std::cout << "checking combinations with " << i << " cliques.." << std::endl;
+			std::cout << "checking combinations with " << num_included << " cliques.." << std::endl;
 		}
-		std::vector<bool> mask(num_maximal_cliques);
-		std::fill_n(mask.begin(), i, true);
-		do {
+
+		// Loop through all clique covers for a given size
+		int nCk = n_choose_k(static_cast<unsigned int>(size), static_cast<unsigned int>(num_included));
+		for (int j = 0; j < nCk; j++) {
+
+
+
 			// the set of cliques that is possibly a (minimal) clique cover
 			std::set<int> ints_in_clique_set;
 			// what might be our minimal clique cover
 			std::vector<std::vector<int>*> candidate;
-			for (unsigned int j = 0; j < num_maximal_cliques; ++j) {
-				if (mask[j]) {
+			std::vector<bool> mask = nth_permutation(size, num_included, j);
+			for (unsigned k = 0; k < size; ++k) {
+				if (mask[k]) {
 					// all the vertices that the candidate has within it
-					for(const int a : maximal_cliques[j]) {
+					for(const int a : maximal_cliques[k]) {
 						ints_in_clique_set.insert(a);
 					}
-					candidate.push_back(&maximal_cliques[j]);
+					candidate.push_back(&maximal_cliques[k]);
 				}
 			}
-			// determine if this is a clique cover
-			if (ints_in_clique_set.size() != all_vertices.size()) {
-				continue;
-			}
-			// && the size of this candidates element < fewest
-			if (result.empty() || candidate.size() < result.size()) {
-				result = candidate;
-				done = true;
-				break;
-			}
-		} while (std::prev_permutation(mask.begin(), mask.end()) && !done);
+	        // determine if this is a clique cover
+	        if (ints_in_clique_set.size() != all_vertices.size()) {
+	            continue;
+	        }
+	        // && the size of this candidates element < fewest
+	        if (result.empty() || candidate.size() < result.size()) {
+	            result = candidate;
+	            done = true;
+	        	break;
+	        }
+		}
 	}
 
 	std::cout << std::endl;

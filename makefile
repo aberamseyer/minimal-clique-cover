@@ -1,19 +1,22 @@
 CC = g++
-FLAGS = -std=c++11 -I boost_1_67_0
+FLAGS = -std=c++11
 
 all: main
 
-main: main.o
-	${CC} ${FLAGS} main.o -o out
+main: main.o Graph.o
+	${CC} ${FLAGS} main.o Graph.o -o out
 
-main.o:
+main.o: Graph.o
 	${CC} ${FLAGS} -c main.cpp
 
+Graph.o:
+	${CC} ${FLAGS} -c Graph.cpp
+
 run: clean main
-	./out 30.txt
+	./out test_data/13.txt
 
 mpi:
-	mpicc -g -Wall ${FLAGS} -o out main.cpp
+	mpicc -g -Wall ${FLAGS} Graph.cpp main.cpp -o out
 
 runmpi:
 	mpiexec -n 4 ./out
