@@ -2,7 +2,7 @@
 #include "Graph.h"
 #include <iostream>
 #include <math.h>
-//#include <mpi.h>
+#include <omp.h>
 #include <set>
 #include <stdlib.h>
 #include <string>
@@ -16,12 +16,12 @@ std::vector<int> intersection(std::vector<int> &s1, std::vector<int> &s2) {
     std::set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(), std::back_inserter(to_return));
     return to_return;
 }
-void bron_kerbosch (std::vector<int> r, std::vector<int> p, std::vector<int> x, int depth) {
+void bron_kerbosch (const std::vector<int> &r, std::vector<int> p, std::vector<int> x, int depth) {
 	if (p.empty()) {
 		if (x.empty()) maximal_cliques.push_back(r);
 		return;
 	}
-	while (p.size() > 0) {
+	while (!p.empty()) {
 		int v = p[0];
 		std::vector<int> this_r = r;
 		std::vector<int> this_p = p;
@@ -41,19 +41,19 @@ void bron_kerbosch (std::vector<int> r, std::vector<int> p, std::vector<int> x, 
 	}
 }
 
-std::vector<bool> nth_permutation (int size, int num_trues, int index) {
+std::vector<bool> nth_permutation (unsigned long size, unsigned num_trues, int index) {
 
 	std::vector<bool> mask;
-	mask.reserve(static_cast<unsigned long>(size));
-	for (int i = 0; i < size; i++) {
+	mask.reserve(size);
+	for (unsigned i = 0; i < size; i++) {
 		bool val = i < num_trues;
 		mask.push_back(val);
 	}
 
 	std::vector<bool> result;
-	result.reserve(static_cast<unsigned long>(size));
-    for (int i = 0; i < size; i++) {
-        int item = index % size;
+	result.reserve(size);
+    for (unsigned i = 0; i < size; i++) {
+        unsigned long item = index % size;
         index /= size;
         result.push_back(mask[item]);
         mask.erase(mask.begin() + item);
@@ -74,6 +74,9 @@ unsigned n_choose_k (unsigned n, unsigned k) {
 }
 
 int main(int argc, char* argv[]) {
+
+	omp_set_num_threads(24);
+
 	std::string current_exec_name = argv[0];
 	std::string input_filename;
 	
@@ -114,9 +117,7 @@ int main(int argc, char* argv[]) {
 //	}
 
 	unsigned long size = maximal_cliques.size(); // how many maximal cliques we found
-	
 	std::vector<std::vector<int>*> result;
-
 	bool done = false;
 
 	// Loop through each size of clique cover, beginning at 1. i is the number of cliques that are to be in the cover
@@ -128,16 +129,15 @@ int main(int argc, char* argv[]) {
 		}
 
 		// Loop through all clique covers for a given size
-		int nCk = n_choose_k(static_cast<unsigned int>(size), static_cast<unsigned int>(num_included));
+		int nCk = n_choose_k(static_cast<unsigned int>(size), num_included);
+#pragma omp parallel for
 		for (int j = 0; j < nCk; j++) {
-
-
-
 			// the set of cliques that is possibly a (minimal) clique cover
 			std::set<int> ints_in_clique_set;
 			// what might be our minimal clique cover
 			std::vector<std::vector<int>*> candidate;
 			std::vector<bool> mask = nth_permutation(size, num_included, j);
+#pragma omp parallel for
 			for (unsigned k = 0; k < size; ++k) {
 				if (mask[k]) {
 					// all the vertices that the candidate has within it
@@ -155,7 +155,8 @@ int main(int argc, char* argv[]) {
 	        if (result.empty() || candidate.size() < result.size()) {
 	            result = candidate;
 	            done = true;
-	        	break;
+//#pragma omp single
+//	        	break;
 	        }
 		}
 	}

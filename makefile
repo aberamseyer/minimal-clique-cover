@@ -1,5 +1,5 @@
 CC = g++
-FLAGS = -std=c++11
+FLAGS = -std=c++11 -g -Wall
 
 all: main
 
@@ -13,10 +13,14 @@ Graph.o:
 	${CC} ${FLAGS} -c Graph.cpp
 
 run: clean main
+	clear
 	./out test_data/13.txt
 
+openmp:
+	${CC} ${FLAGS} -fopenmp Graph.cpp main.cpp -o out
+
 mpi:
-	mpicc -g -Wall ${FLAGS} Graph.cpp main.cpp -o out
+	mpicc ${FLAGS} Graph.cpp main.cpp -o out
 
 runmpi:
 	mpiexec -n 4 ./out
