@@ -1,8 +1,8 @@
 #include <fstream>
 #include "Graph.h"
 #include <iostream>
-#include <math.h>
-//#include <mpi.h>
+//#include <math.h>
+#include <omp.h>
 #include <set>
 #include <stdlib.h>
 #include <string>
@@ -16,12 +16,12 @@ std::vector<int> intersection(std::vector<int> &s1, std::vector<int> &s2) {
     std::set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(), std::back_inserter(to_return));
     return to_return;
 }
-void bron_kerbosch (std::vector<int> r, std::vector<int> p, std::vector<int> x, int depth) {
+void bron_kerbosch (const std::vector<int> &r, std::vector<int> p, std::vector<int> x, int depth) {
 	if (p.empty()) {
 		if (x.empty()) maximal_cliques.push_back(r);
 		return;
 	}
-	while (p.size() > 0) {
+	while (!p.empty()) {
 		int v = p[0];
 		std::vector<int> this_r = r;
 		std::vector<int> this_p = p;
@@ -41,27 +41,6 @@ void bron_kerbosch (std::vector<int> r, std::vector<int> p, std::vector<int> x, 
 	}
 }
 
-std::vector<bool> nth_permutation (int size, int num_trues, int index) {
-
-	std::vector<bool> mask;
-	mask.reserve(static_cast<unsigned long>(size));
-	for (int i = 0; i < size; i++) {
-		bool val = i < num_trues;
-		mask.push_back(val);
-	}
-
-	std::vector<bool> result;
-	result.reserve(static_cast<unsigned long>(size));
-    for (int i = 0; i < size; i++) {
-        int item = index % size;
-        index /= size;
-        result.push_back(mask[item]);
-        mask.erase(mask.begin() + item);
-    }
-
-    return result;
-}
-
 unsigned n_choose_k (unsigned n, unsigned k) {
 	if (k > n) return 0;
 	if (k * 2 > n) k = n-k;
@@ -74,6 +53,9 @@ unsigned n_choose_k (unsigned n, unsigned k) {
 }
 
 int main(int argc, char* argv[]) {
+
+	omp_set_num_threads(24);
+
 	std::string current_exec_name = argv[0];
 	std::string input_filename;
 	
@@ -113,29 +95,8 @@ int main(int argc, char* argv[]) {
 //		std::cout << std::endl;
 //	}
 
-	MPI_Init(&argc, &argv);
-	int my_rank, num_processes;
-	MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
-    MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
-
-    std::vector<int> all_vertices;
-    if (my_rank == 0) {
-		push_back(all_vertices, irange(0, (int) num_vertices(g)));
-		std::cout << "vertex count: " << (int) num_vertices(g) << ", finding maximal cliques.." << std::endl;
-		bron_kerbosch(std::vector<int>(), all_vertices, std::vector<int>(), 0);
-		std::cout << "We found " << maximal_cliques.size() << " maximal cliques." << std::endl;
-		//	for (const std::vector<int> c: maximal_cliques) {
-		//		std::cout << "Clique: ";
-		//		for (const int v: c) std::cout << v << " ";
-		//		std::cout << std::endl;
-		//	}
-
-		num_maximal_cliques = maximal_cliques.size(); // how many maximal cliques we found
-	}
-    MPI_Bcast(&num_maximal_cliques, 1, MPI_INT, 0, MPI_COMM_WORLD);
-	
+	unsigned long size = maximal_cliques.size(); // how many maximal cliques we found
 	std::vector<std::vector<int>*> result;
-
 	bool done = false;
 
 	// Loop through each size of clique cover, beginning at 1. i is the number of cliques that are to be in the cover
@@ -147,18 +108,25 @@ int main(int argc, char* argv[]) {
 		}
 
 		// Loop through all clique covers for a given size
-		int nCk = n_choose_k(static_cast<unsigned int>(size), static_cast<unsigned int>(num_included));
-		for (int j = 0; j < nCk; j++) {
+		unsigned nCk = n_choose_k(static_cast<unsigned int>(size), num_included);
 
+		auto orig_mask = std::vector<bool>(size);
+		std::fill_n(orig_mask.begin(), num_included, true);
 
-
+        #pragma omp parallel for
+		for (unsigned j = 0; j < nCk; j++) {
+		    std::vector<bool> *mask;
+            #pragma omp critical
+		    {
+				std::prev_permutation(orig_mask.begin(), orig_mask.end());
+                mask = new std::vector<bool>(orig_mask);
+		    }
 			// the set of cliques that is possibly a (minimal) clique cover
 			std::set<int> ints_in_clique_set;
 			// what might be our minimal clique cover
 			std::vector<std::vector<int>*> candidate;
-			std::vector<bool> mask = nth_permutation(size, num_included, j);
 			for (unsigned k = 0; k < size; ++k) {
-				if (mask[k]) {
+				if ((*mask)[k]) {
 					// all the vertices that the candidate has within it
 					for(const int a : maximal_cliques[k]) {
 						ints_in_clique_set.insert(a);
@@ -166,6 +134,7 @@ int main(int argc, char* argv[]) {
 					candidate.push_back(&maximal_cliques[k]);
 				}
 			}
+			delete mask;
 	        // determine if this is a clique cover
 	        if (ints_in_clique_set.size() != all_vertices.size()) {
 	            continue;
@@ -174,7 +143,6 @@ int main(int argc, char* argv[]) {
 	        if (result.empty() || candidate.size() < result.size()) {
 	            result = candidate;
 	            done = true;
-	        	break;
 	        }
 		}
 	}

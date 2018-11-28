@@ -1,4 +1,7 @@
 out
+*.out
+profile
+*.txt
 *.o
 *.out
 boost_1_67_0/
