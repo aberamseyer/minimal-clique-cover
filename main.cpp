@@ -125,8 +125,6 @@ int main(int argc, char* argv[]) {
 	for(unsigned i = 0; i < g.get_num_vertices(); ++i)
 		all_vertices.push_back(i);
 	
-	for(unsigned i = 0; i < g.get_num_vertices(); ++i)
-		all_vertices.push_back(i);
 	if (my_rank == 0) {
 		std::cout << "vertex count: " << (int) g.get_num_vertices() << ", finding maximal cliques.." << std::endl;
 	}
@@ -144,26 +142,35 @@ int main(int argc, char* argv[]) {
 	std::vector<std::vector<int>*> result;
 	bool done = false;
 
+	MPI_Barrier(MPI_COMM_WORLD);
 	// Loop through each size of clique cover, beginning at 1. i is the number of cliques that are to be in the cover
 	if (my_rank == 0) {
 		start_comb = MPI_Wtime();
 	}
 	for(unsigned num_included = 1; num_included <= size && !done; ++num_included) {
-		if (num_included == 1) {
-			std::cout << "checking for a complete Graph.." << std::endl;
-		} else {
-			std::cout << "checking combinations with " << num_included << " cliques.." << std::endl;
+		if (my_rank == 0) {
+			if (num_included == 1) {
+				std::cout << "checking for a complete Graph.." << std::endl;
+			} else {
+				std::cout << "checking combinations with " << num_included << " cliques.." << std::endl;
+			}
 		}
 
 		// Loop through all clique covers for a given size
 		unsigned nCk = n_choose_k(static_cast<unsigned int>(size), num_included);
+		// grab a range specific to my process rank
 		std::pair<unsigned, unsigned> range = my_range(nCk, num_processes, my_rank);
-		auto mask = std::vector<bool>(size);		
+		auto mask = std::vector<bool>(size);
 		std::fill_n(mask.begin(), num_included, true);
+		// starting mask will be different for each process
 		mask = nth_permutation (size, num_included, range.second);
-		
-		for (unsigned j = range.second; j >= range.first; j--) {
+		std::cout << "rank: " << my_rank << "; first: " << range.first << "; second: " << range.second << std::endl;
+
+		for (long j = range.second; j >= range.first; j--) {
 			std::prev_permutation(mask.begin(), mask.end());
+			for (auto a : mask)
+				std::cout << a << " ";
+			std::cout << std::endl;
 			// the set of cliques that is possibly a (minimal) clique cover
 			std::set<int> ints_in_clique_set;
 			// what might be our minimal clique cover
@@ -177,11 +184,12 @@ int main(int argc, char* argv[]) {
 					candidate.push_back(&maximal_cliques[k]);
 				}
 			}
+			std::cout << "ints in clique set: " << ints_in_clique_set.size() << "; all_vertices: " << all_vertices.size() << std::endl;
 	        // determine if this is a clique cover
 	        if (ints_in_clique_set.size() != all_vertices.size()) {
 	            continue;
 	        }
-	        // && the size of this candidates element < fewest
+	        // && the size of this candidate's element < fewest
 	        if (result.empty() || candidate.size() < result.size()) {
 	            result = candidate;
 	            done = true;
