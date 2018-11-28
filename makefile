@@ -20,7 +20,7 @@ openmp:
 	${CC} ${FLAGS} -fopenmp -pg Graph.cpp main.cpp -o out
 
 mpi:
-	mpicc ${FLAGS} Graph.cpp main.cpp -o out
+	mpic++ ${FLAGS} -lm Graph.cpp main.cpp -o out
 
 runmpi:
 	mpiexec -n 4 ./out
