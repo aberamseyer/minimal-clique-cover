@@ -1,0 +1,48 @@
+
+mpic++ -std=c++11 -g -O3 -lm -fopenmp graph/Graph.cpp main.cpp -o out
+mpiexec -n 8 ./out test_data/23.txt 1
+
+Bron Kerbosch run time: 0.000785621s
+Combination run time: 62.5524s
+Total run time: 62.5532s
+
+mpiexec -n 4 ./out test_data/23.txt 1
+
+Bron Kerbosch run time: 0.00501164s
+Combination run time: 101.755s
+Total run time: 101.76s
+
+mpiexec -n 2 ./out test_data/23.txt 1
+
+Bron Kerbosch run time: 0.00115998s
+Combination run time: 149.273s
+Total run time: 149.274s
+
+mpiexec -n 1 ./out test_data/23.txt 1
+
+Bron Kerbosch run time: 0.0017643s
+Combination run time: 175.37s
+Total run time: 175.371s
+
+mpiexec -n 8 ./out test_data/23.txt 2
+
+Bron Kerbosch run time: 0.00064569s
+Combination run time: 73.6647s
+Total run time: 73.6654s
+
+mpiexec -n 4 ./out test_data/23.txt 2
+
+Bron Kerbosch run time: 0.00075951s
+Combination run time: 85.2972s
+Total run time: 85.2979s
+
+aramsey@oak ~/Public/388-proj: mpiexec -n 2 ./out test_data/23.txt 2
+Bron Kerbosch run time: 0.00127354s
+Combination run time: 149.077s
+Total run time: 149.079s
+
+aramsey@oak ~/Public/388-proj: mpiexec -n 1 ./out test_data/23.txt 2
+
+Bron Kerbosch run time: 0.00172805s
+Combination run time: 175.811s
+Total run time: 175.813s

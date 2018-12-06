@@ -4,7 +4,7 @@ profile
 *.txt
 *.o
 *.out
-boost_1_67_0/
+ttmath/
 *.tar.*
 *.txt
 

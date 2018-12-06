@@ -9,9 +9,9 @@ using namespace std;
 int main() {
     srand(static_cast<unsigned int>(time(nullptr)));
     ofstream output;
-    output.open("18.txt");
+    output.open("100.txt");
     set<pair<int, int>> a;
-    int max = 18;
+    int max = 100;
     for(int i = 0; i < max; i++) {
         for(int j = 0; j < max; j++) {
             if(i != j && rand()%100 < 30) {
