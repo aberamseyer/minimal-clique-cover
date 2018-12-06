@@ -1,4 +1,4 @@
-This program depends on the ttmath library: https://www.ttmath.org/ It was build with version 0.9.3
+This program depends on the ttmath library: https://www.ttmath.org/ It was built with version 0.9.3
 
 Download and extract, place the ttmath/ folder at the root of the repository as reflected in the .gitignore
 
