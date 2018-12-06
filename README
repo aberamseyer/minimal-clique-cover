@@ -1,0 +1,15 @@
+This program depends on the ttmath library: https://www.ttmath.org/ It was build with version 0.9.3
+
+Download and extract, place the ttmath/ folder at the root of the repository as reflected in the .gitignore
+
+compile and run with 
+
+make 
+
+OR 
+
+make run
+
+We suggest graph sizes of less that 25 for relatively fast (< 10 minutes) runtimes the combinations part of the code. Comment out the combinations portion before running the bron-kerbosch on larger grpah sizes to see that algorithm work well on larger graphs.
+
+A DEBUG flag exists at the top of main.cpp, enable it to see more verbose output including all the cliques we find and the progress made while checking combinations

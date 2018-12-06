@@ -258,7 +258,7 @@ int main(int argc, char* argv[]) {
 	for(auto i : data) {
 		g.add_edge(i.first, i.second);
 	}
-	if (my_rank == 0 && !DEBUG) {
+	if (my_rank == 0 && DEBUG) {
 		std::cout << "built graph" << std::endl;
 	}
 
@@ -267,7 +267,7 @@ int main(int argc, char* argv[]) {
 	for(unsigned i = 0; i < g.get_num_vertices(); ++i)
 		all_vertices.push_back(i);
 
-	if (my_rank == 0 && !DEBUG) {
+	if (my_rank == 0 && DEBUG) {
 		std::cout << "vertex count: " << (int) g.get_num_vertices() << ", finding maximal cliques.." << std::endl;
 	}
 
@@ -277,7 +277,7 @@ int main(int argc, char* argv[]) {
 	MPI_Barrier(MPI_COMM_WORLD);
 	end_bron = MPI_Wtime();
 	
-	if (my_rank == 0 && !DEBUG) {
+	if (my_rank == 0 && DEBUG) {
 		std::cout << "We found " << maximal_cliques.size() << " maximal cliques." << std::endl;
 		for (const std::vector<int> c: maximal_cliques) {
 			std::cout << "Clique: ";
@@ -306,7 +306,7 @@ int main(int argc, char* argv[]) {
 
 		unsigned long nCk = n_choose_k(static_cast<unsigned int>(num_cliques), cur_num_cliques);
 
-		if (my_rank == 0 && !DEBUG)
+		if (my_rank == 0 && DEBUG)
 			std::cout << (MPI_Wtime() - start_comb) << "s elapsed, checking " << nCk << " combinations with " << cur_num_cliques << " cliques.." << std::endl;
 
 		// Loop through all clique covers for a given num_cliques
@@ -371,7 +371,7 @@ int main(int argc, char* argv[]) {
 	if (my_rank == g_success_rank) {
 		std::cout << std::endl;
 		if (!result.empty()) {
-			if (!DEBUG) {
+			if (DEBUG) {
 				std::cout << "yay found a cover with " << result.size() << " cliques in it (inside thread " << my_rank << ")" << std::endl;
 				std::cout << "Minimum Clique Cover: " << std::endl;
 				for (const std::vector<int>* clique : result) {
@@ -390,7 +390,7 @@ int main(int argc, char* argv[]) {
 		else {
 			std::cout << "something went wrong, couldn't find a clique cover" << std::endl;
 		}
-		if (!DEBUG)
+		if (DEBUG)
 			std::cout << std::endl << "Your clique cover is huge!" << std::endl;
 	}
 	
